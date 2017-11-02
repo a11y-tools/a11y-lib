@@ -27,7 +27,8 @@ import {
 export {
   getGroupingLabels,
   getAccessibleName,
-  getAccessibleDesc
+  getAccessibleDesc,
+  getAriaRole // imported from ./roles
 };
 
 /*
