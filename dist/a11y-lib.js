@@ -1174,7 +1174,8 @@ function getAccessibleDesc(element, recFlag) {
 // index.js
 
 // getaccname
+// namefrom
 // roles
 // dom
 
-export { getGroupingLabels, getAccessibleName, getAccessibleDesc, getAriaRole, isVisible, countChildrenWithTagNames };
+export { getGroupingLabels, getAccessibleName, getAccessibleDesc, getAttributeValue, isLabelableElement, getAriaRole, isVisible, countChildrenWithTagNames, isDescendantOf };

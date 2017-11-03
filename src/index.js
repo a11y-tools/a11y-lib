@@ -3,10 +3,9 @@
 // getaccname
 import {
   getGroupingLabels,
-  nameFromNativeSemantics,
   getAccessibleName,
   getAccessibleDesc
-} from './getaccname.js';
+} from './getaccname';
 
 export {
   getGroupingLabels,
@@ -14,11 +13,20 @@ export {
   getAccessibleDesc
 };
 
+// namefrom
+import {
+  getAttributeValue,
+  isLabelableElement
+} from './namefrom';
+
+export {
+  getAttributeValue,
+  isLabelableElement
+}
+
 // roles
 import {
-  getValidRole,
-  getAriaRole,
-  nameFromIncludesContents
+  getAriaRole
 } from './roles';
 
 export {
@@ -29,11 +37,11 @@ export {
 import {
   isVisible,
   countChildrenWithTagNames,
-  isDescendantOf,
-  hasParentWithName
+  isDescendantOf
 } from './dom';
 
 export {
   isVisible,
-  countChildrenWithTagNames
+  countChildrenWithTagNames,
+  isDescendantOf
 };
