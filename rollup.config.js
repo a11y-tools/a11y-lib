@@ -2,10 +2,10 @@ import resolve from 'rollup-plugin-node-resolve';
 import babel from 'rollup-plugin-babel';
 
 export default {
-  input: 'src/main.js',
+  input: 'src/index.js',
   output: {
-    file: 'a11y-lib.js',
-    format: 'cjs'
+    file: 'dist/a11y-lib.js',
+    format: 'es'
   },
   plugins: [
     resolve(),
