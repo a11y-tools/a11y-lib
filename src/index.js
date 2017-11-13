@@ -1,4 +1,6 @@
-// index.js
+/*
+*   index.js: entry point for rollup
+*/
 
 // getaccname
 import {
