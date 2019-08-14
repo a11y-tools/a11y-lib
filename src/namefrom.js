@@ -228,44 +228,6 @@ function nameFromDetailsOrSummary (element) {
 // LOW-LEVEL HELPER FUNCTIONS (NOT EXPORTED)
 
 /*
-*   couldHaveAltText: Based on HTML5 specification, determine whether
-*   element could have an 'alt' attribute.
-*/
-function couldHaveAltText (element) {
-  let tagName = element.tagName.toLowerCase();
-
-  switch (tagName) {
-    case 'img':
-    case 'area':
-      return true;
-    case 'input':
-      return (element.type && element.type === 'image');
-  }
-
-  return false;
-}
-
-/*
-*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
-*   :before and :after. According to the CSS spec, test that content value
-*   is other than the default computed value of 'none'.
-*
-*   Note: Even if an author specifies content: 'none', because browsers add
-*   the double-quote character to the beginning and end of computed string
-*   values, the result cannot and will not be equal to 'none'.
-*/
-function addCssGeneratedContent (element, contents) {
-  let result = contents,
-      prefix = getComputedStyle(element, ':before').content,
-      suffix = getComputedStyle(element, ':after').content;
-
-  if (prefix !== 'none') result = prefix + result;
-  if (suffix !== 'none') result = result + suffix;
-
-  return result;
-}
-
-/*
 *   getNodeContents: Recursively process element and text nodes by aggregating
 *   their text values for an ARIA text equivalent calculation.
 *   1. This includes special handling of elements with 'alt' text and embedded
@@ -308,6 +270,44 @@ function getNodeContents (node, forElem) {
   }
 
   return contents;
+}
+
+/*
+*   couldHaveAltText: Based on HTML5 specification, determine whether
+*   element could have an 'alt' attribute.
+*/
+function couldHaveAltText (element) {
+  let tagName = element.tagName.toLowerCase();
+
+  switch (tagName) {
+    case 'img':
+    case 'area':
+      return true;
+    case 'input':
+      return (element.type && element.type === 'image');
+  }
+
+  return false;
+}
+
+/*
+*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
+*   :before and :after. According to the CSS spec, test that content value
+*   is other than the default computed value of 'none'.
+*
+*   Note: Even if an author specifies content: 'none', because browsers add
+*   the double-quote character to the beginning and end of computed string
+*   values, the result cannot and will not be equal to 'none'.
+*/
+function addCssGeneratedContent (element, contents) {
+  let result = contents,
+      prefix = getComputedStyle(element, ':before').content,
+      suffix = getComputedStyle(element, ':after').content;
+
+  if (prefix !== 'none') result = prefix + result;
+  if (suffix !== 'none') result = result + suffix;
+
+  return result;
 }
 
 /*
