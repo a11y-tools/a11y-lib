@@ -45,24 +45,6 @@ function getAttributeValue (element, attribute) {
 }
 
 /*
-*   couldHaveAltText: Based on HTML5 specification, determine whether
-*   element could have an 'alt' attribute.
-*/
-function couldHaveAltText (element) {
-  let tagName = element.tagName.toLowerCase();
-
-  switch (tagName) {
-    case 'img':
-    case 'area':
-      return true;
-    case 'input':
-      return (element.type && element.type === 'image');
-  }
-
-  return false;
-}
-
-/*
 *   hasEmptyAltText: Determine whether the alt attribute is present
 *   and its value is the empty string.
 */
@@ -101,71 +83,6 @@ function isLabelableElement (element) {
 }
 
 /*
-*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
-*   :before and :after. According to the CSS spec, test that content value
-*   is other than the default computed value of 'none'.
-*
-*   Note: Even if an author specifies content: 'none', because browsers add
-*   the double-quote character to the beginning and end of computed string
-*   values, the result cannot and will not be equal to 'none'.
-*/
-function addCssGeneratedContent (element, contents) {
-  let result = contents,
-      prefix = getComputedStyle(element, ':before').content,
-      suffix = getComputedStyle(element, ':after').content;
-
-  if (prefix !== 'none') result = prefix + result;
-  if (suffix !== 'none') result = result + suffix;
-
-  return result;
-}
-
-/*
-*   getNodeContents: Recursively process element and text nodes by aggregating
-*   their text values for an ARIA text equivalent calculation.
-*   1. This includes special handling of elements with 'alt' text and embedded
-*      controls.
-*   2. The forElem parameter is needed for label processing to avoid inclusion
-*      of an embedded control's value when the label is for the control itself.
-*/
-function getNodeContents (node, forElem) {
-  let contents = '';
-
-  if (node === forElem) return '';
-
-  switch (node.nodeType) {
-    case Node.ELEMENT_NODE:
-      if (couldHaveAltText(node)) {
-        contents = getAttributeValue(node, 'alt');
-      }
-      else if (isEmbeddedControl(node)) {
-        contents = getEmbeddedControlValue(node);
-      }
-      else {
-        if (node.hasChildNodes()) {
-          let children = node.childNodes,
-              arr = [];
-
-          for (let i = 0; i < children.length; i++) {
-            let nc = getNodeContents(children[i], forElem);
-            if (nc.length) arr.push(nc);
-          }
-
-          contents = (arr.length) ? arr.join(' ') : '';
-        }
-      }
-      // For all branches of the ELEMENT_NODE case...
-      contents = addCssGeneratedContent(node, contents);
-      break;
-
-    case Node.TEXT_NODE:
-      contents = normalize(node.textContent);
-  }
-
-  return contents;
-}
-
-/*
 *   getElementContents: Construct the ARIA text alternative for element by
 *   processing its element and text node descendants and then adding any CSS-
 *   generated content if present.
@@ -186,32 +103,6 @@ function getElementContents (element, forElement) {
   }
 
   return addCssGeneratedContent(element, result);
-}
-
-/*
-*   getContentsOfChildNodes: Using predicate function for filtering element
-*   nodes, collect text content from all child nodes of element.
-*/
-function getContentsOfChildNodes (element, predicate) {
-  let arr = [], content;
-
-  Array.prototype.forEach.call(element.childNodes, function (node) {
-    switch (node.nodeType) {
-      case (Node.ELEMENT_NODE):
-        if (predicate(node)) {
-          content = getElementContents(node);
-          if (content.length) arr.push(content);
-        }
-        break;
-      case (Node.TEXT_NODE):
-        content = normalize(node.textContent);
-        if (content.length) arr.push(content);
-        break;
-    }
-  });
-
-  if (arr.length) return arr.join(' ');
-  return '';
 }
 
 // HIGHER-LEVEL FUNCTIONS THAT RETURN AN OBJECT WITH SOURCE PROPERTY
@@ -332,4 +223,115 @@ function nameFromDetailsOrSummary (element) {
   }
 
   return null;
+}
+
+// LOW-LEVEL HELPER FUNCTIONS (NOT EXPORTED)
+
+/*
+*   couldHaveAltText: Based on HTML5 specification, determine whether
+*   element could have an 'alt' attribute.
+*/
+function couldHaveAltText (element) {
+  let tagName = element.tagName.toLowerCase();
+
+  switch (tagName) {
+    case 'img':
+    case 'area':
+      return true;
+    case 'input':
+      return (element.type && element.type === 'image');
+  }
+
+  return false;
+}
+
+/*
+*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
+*   :before and :after. According to the CSS spec, test that content value
+*   is other than the default computed value of 'none'.
+*
+*   Note: Even if an author specifies content: 'none', because browsers add
+*   the double-quote character to the beginning and end of computed string
+*   values, the result cannot and will not be equal to 'none'.
+*/
+function addCssGeneratedContent (element, contents) {
+  let result = contents,
+      prefix = getComputedStyle(element, ':before').content,
+      suffix = getComputedStyle(element, ':after').content;
+
+  if (prefix !== 'none') result = prefix + result;
+  if (suffix !== 'none') result = result + suffix;
+
+  return result;
+}
+
+/*
+*   getNodeContents: Recursively process element and text nodes by aggregating
+*   their text values for an ARIA text equivalent calculation.
+*   1. This includes special handling of elements with 'alt' text and embedded
+*      controls.
+*   2. The forElem parameter is needed for label processing to avoid inclusion
+*      of an embedded control's value when the label is for the control itself.
+*/
+function getNodeContents (node, forElem) {
+  let contents = '';
+
+  if (node === forElem) return '';
+
+  switch (node.nodeType) {
+    case Node.ELEMENT_NODE:
+      if (couldHaveAltText(node)) {
+        contents = getAttributeValue(node, 'alt');
+      }
+      else if (isEmbeddedControl(node)) {
+        contents = getEmbeddedControlValue(node);
+      }
+      else {
+        if (node.hasChildNodes()) {
+          let children = node.childNodes,
+              arr = [];
+
+          for (let i = 0; i < children.length; i++) {
+            let nc = getNodeContents(children[i], forElem);
+            if (nc.length) arr.push(nc);
+          }
+
+          contents = (arr.length) ? arr.join(' ') : '';
+        }
+      }
+      // For all branches of the ELEMENT_NODE case...
+      contents = addCssGeneratedContent(node, contents);
+      break;
+
+    case Node.TEXT_NODE:
+      contents = normalize(node.textContent);
+  }
+
+  return contents;
+}
+
+/*
+*   getContentsOfChildNodes: Using predicate function for filtering element
+*   nodes, collect text content from all child nodes of element.
+*/
+function getContentsOfChildNodes (element, predicate) {
+  let arr = [], content;
+
+  Array.prototype.forEach.call(element.childNodes, function (node) {
+    switch (node.nodeType) {
+      case (Node.ELEMENT_NODE):
+        if (predicate(node)) {
+          content = getElementContents(node);
+          if (content.length) arr.push(content);
+        }
+        break;
+      case (Node.TEXT_NODE):
+        content = normalize(node.textContent);
+        if (content.length) arr.push(content);
+        break;
+    }
+  });
+
+  if (arr.length) return arr.join(' ');
+  return '';
 }
