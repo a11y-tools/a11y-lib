@@ -1,10 +1,64 @@
 /*
 *   embedded.js
+*
+*   To calculate the accessible name of a form element from its label, it is
+*   necessary to aggregate the text nodes in the label along with the values
+*   of any embedded controls that text content may contain.
+*
+*   isEmbeddedControl is used to determine whether or not a form control can
+*   be embedded within text content.
+*
+*   getEmbeddedControlValue is used to get the value of an embedded control
+*   based on its ARIA role.
 */
 
 import { getAriaRole } from './roles';
 import { getAttributeValue, normalize } from './namefrom';
 export { isEmbeddedControl, getEmbeddedControlValue };
+
+/*
+*   isEmbeddedControl: Determine whether element has a role that corresponds
+*   to an HTML form control that could be embedded within text content.
+*/
+function isEmbeddedControl (element) {
+  let embeddedControlRoles = [
+    'textbox',
+    'combobox',
+    'listbox',
+    'slider',
+    'spinbutton'
+  ];
+  let role = getAriaRole(element);
+
+  return (embeddedControlRoles.indexOf(role) !== -1);
+}
+
+/*
+*   getEmbeddedControlValue: Based on the role of element, use native semantics
+*   of HTML to get the corresponding text value of the embedded control.
+*/
+function getEmbeddedControlValue (element) {
+  let role = getAriaRole(element);
+
+  switch (role) {
+    case 'textbox':
+      return getTextboxValue(element);
+
+    case 'combobox':
+      return getComboboxValue(element);
+
+    case 'listbox':
+      return getListboxValue(element);
+
+    case 'slider':
+      return getSliderValue(element);
+
+    case 'spinbutton':
+      return getSpinbuttonValue(element);
+  }
+
+  return '';
+}
 
 // LOW-LEVEL FUNCTIONS
 
@@ -96,50 +150,6 @@ function getListboxValue (element) {
     }
 
     if (arr.length) return arr.join(' ');
-  }
-
-  return '';
-}
-
-/*
-*   isEmbeddedControl: Determine whether element has a role that corresponds
-*   to an HTML form control that could be embedded within text content.
-*/
-function isEmbeddedControl (element) {
-  let embeddedControlRoles = [
-    'textbox',
-    'combobox',
-    'listbox',
-    'slider',
-    'spinbutton'
-  ];
-  let role = getAriaRole(element);
-
-  return (embeddedControlRoles.indexOf(role) !== -1);
-}
-
-/*
-*   getEmbeddedControlValue: Based on the role of element, use native semantics
-*   of HTML to get the corresponding text value of the embedded control.
-*/
-function getEmbeddedControlValue (element) {
-  let role = getAriaRole(element);
-
-  switch (role) {
-    case 'textbox':
-      return getTextboxValue(element);
-
-    case 'combobox':
-      return getComboboxValue(element);
-
-    case 'listbox':
-      return getListboxValue(element);
-
-    case 'slider':
-      return getSliderValue(element);
-
-    case 'spinbutton':
-      return getSpinbuttonValue(element);
   }
 
   return '';
