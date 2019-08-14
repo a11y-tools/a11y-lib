@@ -25,42 +25,43 @@ import {
 } from './roles';
 
 export {
-  getGroupingLabels,
-  nameFromNativeSemantics,
   getAccessibleName,
-  getAccessibleDesc
+  getAccessibleDesc,
+  getGroupingLabels,
+  nameFromNativeSemantics
 };
 
 /*
-*   getFieldsetLegendLabels: Recursively collect legend contents of
-*   fieldset ancestors, starting with the closest (innermost).
-*   Return collection as a possibly empty array of strings.
+*   getAccessibleName: Use the ARIA Roles Model specification for accessible
+*   name calculation based on its precedence order:
+*   (1) Use aria-labelledby, unless a traversal is already underway;
+*   (2) Use aria-label attribute value;
+*   (3) Use whatever method is specified by the native semantics of the
+*   element, which includes, as last resort, use of the title attribute.
 */
-function getFieldsetLegendLabels (element) {
-  let arrayOfStrings = [];
+function getAccessibleName (element, recFlag) {
+  let accName = null;
 
-  if (typeof element.closest !== 'function') {
-    return arrayOfStrings;
-  }
+  if (!recFlag) accName = nameFromAttributeIdRefs(element, 'aria-labelledby');
+  if (accName === null) accName = nameFromAttribute(element, 'aria-label');
+  if (accName === null) accName = nameFromNativeSemantics(element, recFlag);
 
-  function getLabelsRec (elem, arr) {
-    let fieldset = elem.closest('fieldset');
+  return accName;
+}
 
-    if (fieldset) {
-      let legend = fieldset.querySelector('legend');
-      if (legend) {
-        let text = getElementContents(legend);
-        if (text.length){
-          arr.push({ name: text, source: 'fieldset/legend' });
-        }
-      }
-      // process ancestors
-      getLabelsRec(fieldset.parentNode, arr);
-    }
-  }
+/*
+*   getAccessibleDesc: Use the ARIA Roles Model specification for accessible
+*   description calculation based on its precedence order:
+*   (1) Use aria-describedby, unless a traversal is already underway;
+*   (2) As last resort, use the title attribute.
+*/
+function getAccessibleDesc (element, recFlag) {
+  let accDesc = null;
 
-  getLabelsRec(element, arrayOfStrings);
-  return arrayOfStrings;
+  if (!recFlag) accDesc = nameFromAttributeIdRefs(element, 'aria-describedby');
+  if (accDesc === null) accDesc = nameFromAttribute(element, 'title');
+
+  return accDesc;
 }
 
 /*
@@ -224,6 +225,8 @@ function nameFromNativeSemantics (element, recFlag) {
   return accName;
 }
 
+// HELPER FUNCTIONS (NOT EXPORTED)
+
 /*
 *   nameFromAttributeIdRefs: Get the value of attrName on element (a space-
 *   separated list of IDREFs), visit each referenced element in the order it
@@ -255,34 +258,33 @@ function nameFromAttributeIdRefs (element, attribute) {
 }
 
 /*
-*   getAccessibleName: Use the ARIA Roles Model specification for accessible
-*   name calculation based on its precedence order:
-*   (1) Use aria-labelledby, unless a traversal is already underway;
-*   (2) Use aria-label attribute value;
-*   (3) Use whatever method is specified by the native semantics of the
-*   element, which includes, as last resort, use of the title attribute.
+*   getFieldsetLegendLabels: Recursively collect legend contents of
+*   fieldset ancestors, starting with the closest (innermost).
+*   Return collection as a possibly empty array of strings.
 */
-function getAccessibleName (element, recFlag) {
-  let accName = null;
+function getFieldsetLegendLabels (element) {
+  let arrayOfStrings = [];
 
-  if (!recFlag) accName = nameFromAttributeIdRefs(element, 'aria-labelledby');
-  if (accName === null) accName = nameFromAttribute(element, 'aria-label');
-  if (accName === null) accName = nameFromNativeSemantics(element, recFlag);
+  if (typeof element.closest !== 'function') {
+    return arrayOfStrings;
+  }
 
-  return accName;
-}
+  function getLabelsRec (elem, arr) {
+    let fieldset = elem.closest('fieldset');
 
-/*
-*   getAccessibleDesc: Use the ARIA Roles Model specification for accessible
-*   description calculation based on its precedence order:
-*   (1) Use aria-describedby, unless a traversal is already underway;
-*   (2) As last resort, use the title attribute.
-*/
-function getAccessibleDesc (element, recFlag) {
-  let accDesc = null;
+    if (fieldset) {
+      let legend = fieldset.querySelector('legend');
+      if (legend) {
+        let text = getElementContents(legend);
+        if (text.length){
+          arr.push({ name: text, source: 'fieldset/legend' });
+        }
+      }
+      // process ancestors
+      getLabelsRec(fieldset.parentNode, arr);
+    }
+  }
 
-  if (!recFlag) accDesc = nameFromAttributeIdRefs(element, 'aria-describedby');
-  if (accDesc === null) accDesc = nameFromAttribute(element, 'title');
-
-  return accDesc;
+  getLabelsRec(element, arrayOfStrings);
+  return arrayOfStrings;
 }
