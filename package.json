@@ -4,16 +4,16 @@
   "description": "HTML5 and ARIA Accessibility Library",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oaa-tools/a11y-lib.git"
-  },
-  "main": "src/index.js",
-  "scripts": {
-    "build": "rollup -c",
-    "lint": "eslint src/*.js"
+    "url": "git+https://github.com/a11y-tools/a11y-lib.git"
   },
   "author": "Nicholas Hoyt",
   "license": "Apache-2.0",
   "devDependencies": {
-    "rollup": "^0.50.0"
-  }
+    "rollup": "^3.27.0"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "cleanup": "sed -i '' '/^$/N;/^\\n$/D' dist/a11y-lib.js"
+  },
+  "type": "module"
 }

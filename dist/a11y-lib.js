@@ -370,7 +370,61 @@ function nameFromIncludesContents (element) {
 
 /*
 *   embedded.js
+*
+*   To calculate the accessible name of a form element from its label, it is
+*   necessary to aggregate the text nodes in the label along with the values
+*   of any embedded controls that text content may contain.
+*
+*   isEmbeddedControl is used to determine whether or not a form control can
+*   be embedded within text content.
+*
+*   getEmbeddedControlValue is used to get the value of an embedded control
+*   based on its ARIA role.
 */
+
+/*
+*   isEmbeddedControl: Determine whether element has a role that corresponds
+*   to an HTML form control that could be embedded within text content.
+*/
+function isEmbeddedControl (element) {
+  let embeddedControlRoles = [
+    'textbox',
+    'combobox',
+    'listbox',
+    'slider',
+    'spinbutton'
+  ];
+  let role = getAriaRole(element);
+
+  return (embeddedControlRoles.indexOf(role) !== -1);
+}
+
+/*
+*   getEmbeddedControlValue: Based on the role of element, use native semantics
+*   of HTML to get the corresponding text value of the embedded control.
+*/
+function getEmbeddedControlValue (element) {
+  let role = getAriaRole(element);
+
+  switch (role) {
+    case 'textbox':
+      return getTextboxValue(element);
+
+    case 'combobox':
+      return getComboboxValue(element);
+
+    case 'listbox':
+      return getListboxValue(element);
+
+    case 'slider':
+      return getSliderValue(element);
+
+    case 'spinbutton':
+      return getSpinbuttonValue(element);
+  }
+
+  return '';
+}
 
 // LOW-LEVEL FUNCTIONS
 
@@ -468,50 +522,6 @@ function getListboxValue (element) {
 }
 
 /*
-*   isEmbeddedControl: Determine whether element has a role that corresponds
-*   to an HTML form control that could be embedded within text content.
-*/
-function isEmbeddedControl (element) {
-  let embeddedControlRoles = [
-    'textbox',
-    'combobox',
-    'listbox',
-    'slider',
-    'spinbutton'
-  ];
-  let role = getAriaRole(element);
-
-  return (embeddedControlRoles.indexOf(role) !== -1);
-}
-
-/*
-*   getEmbeddedControlValue: Based on the role of element, use native semantics
-*   of HTML to get the corresponding text value of the embedded control.
-*/
-function getEmbeddedControlValue (element) {
-  let role = getAriaRole(element);
-
-  switch (role) {
-    case 'textbox':
-      return getTextboxValue(element);
-
-    case 'combobox':
-      return getComboboxValue(element);
-
-    case 'listbox':
-      return getListboxValue(element);
-
-    case 'slider':
-      return getSliderValue(element);
-
-    case 'spinbutton':
-      return getSpinbuttonValue(element);
-  }
-
-  return '';
-}
-
-/*
 *   namefrom.js
 */
 
@@ -519,7 +529,7 @@ function getEmbeddedControlValue (element) {
 
 /*
 *   normalize: Trim leading and trailing whitespace and condense all
-*   interal sequences of whitespace to a single space. Adapted from
+*   internal sequences of whitespace to a single space. Adapted from
 *   Mozilla documentation on String.prototype.trim polyfill. Handles
 *   BOM and NBSP characters.
 */
@@ -535,24 +545,6 @@ function normalize (s) {
 function getAttributeValue (element, attribute) {
   let value = element.getAttribute(attribute);
   return (value === null) ? '' : normalize(value);
-}
-
-/*
-*   couldHaveAltText: Based on HTML5 specification, determine whether
-*   element could have an 'alt' attribute.
-*/
-function couldHaveAltText (element) {
-  let tagName = element.tagName.toLowerCase();
-
-  switch (tagName) {
-    case 'img':
-    case 'area':
-      return true;
-    case 'input':
-      return (element.type && element.type === 'image');
-  }
-
-  return false;
 }
 
 /*
@@ -594,71 +586,6 @@ function isLabelableElement (element) {
 }
 
 /*
-*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
-*   :before and :after. According to the CSS spec, test that content value
-*   is other than the default computed value of 'none'.
-*
-*   Note: Even if an author specifies content: 'none', because browsers add
-*   the double-quote character to the beginning and end of computed string
-*   values, the result cannot and will not be equal to 'none'.
-*/
-function addCssGeneratedContent (element, contents) {
-  let result = contents,
-      prefix = getComputedStyle(element, ':before').content,
-      suffix = getComputedStyle(element, ':after').content;
-
-  if (prefix !== 'none') result = prefix + result;
-  if (suffix !== 'none') result = result + suffix;
-
-  return result;
-}
-
-/*
-*   getNodeContents: Recursively process element and text nodes by aggregating
-*   their text values for an ARIA text equivalent calculation.
-*   1. This includes special handling of elements with 'alt' text and embedded
-*      controls.
-*   2. The forElem parameter is needed for label processing to avoid inclusion
-*      of an embedded control's value when the label is for the control itself.
-*/
-function getNodeContents (node, forElem) {
-  let contents = '';
-
-  if (node === forElem) return '';
-
-  switch (node.nodeType) {
-    case Node.ELEMENT_NODE:
-      if (couldHaveAltText(node)) {
-        contents = getAttributeValue(node, 'alt');
-      }
-      else if (isEmbeddedControl(node)) {
-        contents = getEmbeddedControlValue(node);
-      }
-      else {
-        if (node.hasChildNodes()) {
-          let children = node.childNodes,
-              arr = [];
-
-          for (let i = 0; i < children.length; i++) {
-            let nc = getNodeContents(children[i], forElem);
-            if (nc.length) arr.push(nc);
-          }
-
-          contents = (arr.length) ? arr.join(' ') : '';
-        }
-      }
-      // For all branches of the ELEMENT_NODE case...
-      contents = addCssGeneratedContent(node, contents);
-      break;
-
-    case Node.TEXT_NODE:
-      contents = normalize(node.textContent);
-  }
-
-  return contents;
-}
-
-/*
 *   getElementContents: Construct the ARIA text alternative for element by
 *   processing its element and text node descendants and then adding any CSS-
 *   generated content if present.
@@ -679,32 +606,6 @@ function getElementContents (element, forElement) {
   }
 
   return addCssGeneratedContent(element, result);
-}
-
-/*
-*   getContentsOfChildNodes: Using predicate function for filtering element
-*   nodes, collect text content from all child nodes of element.
-*/
-function getContentsOfChildNodes (element, predicate) {
-  let arr = [], content;
-
-  Array.prototype.forEach.call(element.childNodes, function (node) {
-    switch (node.nodeType) {
-      case (Node.ELEMENT_NODE):
-        if (predicate(node)) {
-          content = getElementContents(node);
-          if (content.length) arr.push(content);
-        }
-        break;
-      case (Node.TEXT_NODE):
-        content = normalize(node.textContent);
-        if (content.length) arr.push(content);
-        break;
-    }
-  });
-
-  if (arr.length) return arr.join(' ');
-  return '';
 }
 
 // HIGHER-LEVEL FUNCTIONS THAT RETURN AN OBJECT WITH SOURCE PROPERTY
@@ -827,6 +728,117 @@ function nameFromDetailsOrSummary (element) {
   return null;
 }
 
+// LOW-LEVEL HELPER FUNCTIONS (NOT EXPORTED)
+
+/*
+*   getNodeContents: Recursively process element and text nodes by aggregating
+*   their text values for an ARIA text equivalent calculation.
+*   1. This includes special handling of elements with 'alt' text and embedded
+*      controls.
+*   2. The forElem parameter is needed for label processing to avoid inclusion
+*      of an embedded control's value when the label is for the control itself.
+*/
+function getNodeContents (node, forElem) {
+  let contents = '';
+
+  if (node === forElem) return '';
+
+  switch (node.nodeType) {
+    case Node.ELEMENT_NODE:
+      if (couldHaveAltText(node)) {
+        contents = getAttributeValue(node, 'alt');
+      }
+      else if (isEmbeddedControl(node)) {
+        contents = getEmbeddedControlValue(node);
+      }
+      else {
+        if (node.hasChildNodes()) {
+          let children = node.childNodes,
+              arr = [];
+
+          for (let i = 0; i < children.length; i++) {
+            let nc = getNodeContents(children[i], forElem);
+            if (nc.length) arr.push(nc);
+          }
+
+          contents = (arr.length) ? arr.join(' ') : '';
+        }
+      }
+      // For all branches of the ELEMENT_NODE case...
+      contents = addCssGeneratedContent(node, contents);
+      break;
+
+    case Node.TEXT_NODE:
+      contents = normalize(node.textContent);
+  }
+
+  return contents;
+}
+
+/*
+*   couldHaveAltText: Based on HTML5 specification, determine whether
+*   element could have an 'alt' attribute.
+*/
+function couldHaveAltText (element) {
+  let tagName = element.tagName.toLowerCase();
+
+  switch (tagName) {
+    case 'img':
+    case 'area':
+      return true;
+    case 'input':
+      return (element.type && element.type === 'image');
+  }
+
+  return false;
+}
+
+/*
+*   addCssGeneratedContent: Add CSS-generated content for pseudo-elements
+*   :before and :after. According to the CSS spec, test that content value
+*   is other than the default computed value of 'none'.
+*
+*   Note: Even if an author specifies content: 'none', because browsers add
+*   the double-quote character to the beginning and end of computed string
+*   values, the result cannot and will not be equal to 'none'.
+*/
+function addCssGeneratedContent (element, contents) {
+  let result = contents,
+      prefix = getComputedStyle(element, ':before').content,
+      suffix = getComputedStyle(element, ':after').content;
+
+  if (prefix !== 'none') result = prefix + result;
+  if (suffix !== 'none') result = result + suffix;
+
+  return result;
+}
+
+/*
+*   getContentsOfChildNodes: Using predicate function for filtering element
+*   nodes, collect text content from all child nodes of element.
+*/
+function getContentsOfChildNodes (element, predicate) {
+  let arr = [], content;
+
+  Array.prototype.forEach.call(element.childNodes, function (node) {
+    switch (node.nodeType) {
+      case (Node.ELEMENT_NODE):
+        if (predicate(node)) {
+          content = getElementContents(node);
+          if (content.length) arr.push(content);
+        }
+        break;
+      case (Node.TEXT_NODE):
+        content = normalize(node.textContent);
+        if (content.length) arr.push(content);
+        break;
+    }
+  });
+
+  if (arr.length) return arr.join(' ');
+  return '';
+}
+
 /*
 *   getaccname.js
 *
@@ -836,35 +848,36 @@ function nameFromDetailsOrSummary (element) {
 */
 
 /*
-*   getFieldsetLegendLabels: Recursively collect legend contents of
-*   fieldset ancestors, starting with the closest (innermost).
-*   Return collection as a possibly empty array of strings.
+*   getAccessibleName: Use the ARIA Roles Model specification for accessible
+*   name calculation based on its precedence order:
+*   (1) Use aria-labelledby, unless a traversal is already underway;
+*   (2) Use aria-label attribute value;
+*   (3) Use whatever method is specified by the native semantics of the
+*   element, which includes, as last resort, use of the title attribute.
 */
-function getFieldsetLegendLabels (element) {
-  let arrayOfStrings = [];
+function getAccessibleName (element, recFlag) {
+  let accName = null;
 
-  if (typeof element.closest !== 'function') {
-    return arrayOfStrings;
-  }
+  if (!recFlag) accName = nameFromAttributeIdRefs(element, 'aria-labelledby');
+  if (accName === null) accName = nameFromAttribute(element, 'aria-label');
+  if (accName === null) accName = nameFromNativeSemantics(element, recFlag);
 
-  function getLabelsRec (elem, arr) {
-    let fieldset = elem.closest('fieldset');
+  return accName;
+}
 
-    if (fieldset) {
-      let legend = fieldset.querySelector('legend');
-      if (legend) {
-        let text = getElementContents(legend);
-        if (text.length){
-          arr.push({ name: text, source: 'fieldset/legend' });
-        }
-      }
-      // process ancestors
-      getLabelsRec(fieldset.parentNode, arr);
-    }
-  }
+/*
+*   getAccessibleDesc: Use the ARIA Roles Model specification for accessible
+*   description calculation based on its precedence order:
+*   (1) Use aria-describedby, unless a traversal is already underway;
+*   (2) As last resort, use the title attribute.
+*/
+function getAccessibleDesc (element, recFlag) {
+  let accDesc = null;
 
-  getLabelsRec(element, arrayOfStrings);
-  return arrayOfStrings;
+  if (!recFlag) accDesc = nameFromAttributeIdRefs(element, 'aria-describedby');
+  if (accDesc === null) accDesc = nameFromAttribute(element, 'title');
+
+  return accDesc;
 }
 
 /*
@@ -1028,6 +1041,8 @@ function nameFromNativeSemantics (element, recFlag) {
   return accName;
 }
 
+// HELPER FUNCTIONS (NOT EXPORTED)
+
 /*
 *   nameFromAttributeIdRefs: Get the value of attrName on element (a space-
 *   separated list of IDREFs), visit each referenced element in the order it
@@ -1059,50 +1074,35 @@ function nameFromAttributeIdRefs (element, attribute) {
 }
 
 /*
-*   getAccessibleName: Use the ARIA Roles Model specification for accessible
-*   name calculation based on its precedence order:
-*   (1) Use aria-labelledby, unless a traversal is already underway;
-*   (2) Use aria-label attribute value;
-*   (3) Use whatever method is specified by the native semantics of the
-*   element, which includes, as last resort, use of the title attribute.
+*   getFieldsetLegendLabels: Recursively collect legend contents of
+*   fieldset ancestors, starting with the closest (innermost).
+*   Return collection as a possibly empty array of strings.
 */
-function getAccessibleName (element, recFlag) {
-  let accName = null;
+function getFieldsetLegendLabels (element) {
+  let arrayOfStrings = [];
 
-  if (!recFlag) accName = nameFromAttributeIdRefs(element, 'aria-labelledby');
-  if (accName === null) accName = nameFromAttribute(element, 'aria-label');
-  if (accName === null) accName = nameFromNativeSemantics(element, recFlag);
+  if (typeof element.closest !== 'function') {
+    return arrayOfStrings;
+  }
 
-  return accName;
+  function getLabelsRec (elem, arr) {
+    let fieldset = elem.closest('fieldset');
+
+    if (fieldset) {
+      let legend = fieldset.querySelector('legend');
+      if (legend) {
+        let text = getElementContents(legend);
+        if (text.length){
+          arr.push({ name: text, source: 'fieldset/legend' });
+        }
+      }
+      // process ancestors
+      getLabelsRec(fieldset.parentNode, arr);
+    }
+  }
+
+  getLabelsRec(element, arrayOfStrings);
+  return arrayOfStrings;
 }
 
-/*
-*   getAccessibleDesc: Use the ARIA Roles Model specification for accessible
-*   description calculation based on its precedence order:
-*   (1) Use aria-describedby, unless a traversal is already underway;
-*   (2) As last resort, use the title attribute.
-*/
-function getAccessibleDesc (element, recFlag) {
-  let accDesc = null;
-
-  if (!recFlag) accDesc = nameFromAttributeIdRefs(element, 'aria-describedby');
-  if (accDesc === null) accDesc = nameFromAttribute(element, 'title');
-
-  return accDesc;
-}
-
-/*
-*   index.js: entry point for rollup
-*/
-
-export {
-  getGroupingLabels,
-  getAccessibleName,
-  getAccessibleDesc,
-  getAttributeValue,
-  isLabelableElement,
-  getAriaRole,
-  isVisible,
-  countChildrenWithTagNames,
-  isDescendantOf
-};
+export { countChildrenWithTagNames, getAccessibleDesc, getAccessibleName, getAriaRole, getAttributeValue, getGroupingLabels, isDescendantOf, isLabelableElement, isVisible };
