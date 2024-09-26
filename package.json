@@ -9,7 +9,7 @@
   "author": "Nicholas Hoyt",
   "license": "Apache-2.0",
   "devDependencies": {
-    "rollup": "^3.27.0"
+    "rollup": "^3.29.5"
   },
   "scripts": {
     "build": "rollup -c",
